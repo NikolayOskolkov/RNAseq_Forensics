@@ -6,6 +6,8 @@
 This is a computational machine learning method for detecting unwanted tissue signals in RNAseq samples.
 
 ## Quick Start
-dffsdf
+To run the contaminaation prediction you need to provide a gene expression matrux `merged_tissues_organisms.txt` and run the following command line:
+
+    Rscript RNAseq_Tissue_Predictor.R merged_tissues_organisms.txt
 
 The GTEX v.7 gene expression matrix caan be downloaded from: https://drive.google.com/drive/folders/1AuHLbv_VqVgLmz9GptN80adjjbUaNj4I?usp=drive_link
