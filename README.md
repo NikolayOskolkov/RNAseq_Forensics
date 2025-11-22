@@ -6,7 +6,7 @@
 This is a computational machine learning method for detecting unwanted tissue signals in RNAseq samples.
 
 ## Quick Start
-To run the contamination prediction you need to provide a gene expression matrix `merged_tissues_organisms.txt` and run the following command line:
+To predict contamination, you need to provide a gene expression matrix `merged_tissues_organisms.txt` and run the following command line:
 
     Rscript RNAseq_Tissue_Predictor.R merged_tissues_organisms.txt
 
