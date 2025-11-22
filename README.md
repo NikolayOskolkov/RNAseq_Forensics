@@ -7,3 +7,5 @@ This is a computational machine learning method for detecting unwanted tissue si
 
 ## Quick Start
 dffsdf
+
+The GTEX v.7 gene expression matrix caan be downloaded from: https://drive.google.com/drive/folders/1AuHLbv_VqVgLmz9GptN80adjjbUaNj4I?usp=drive_link
