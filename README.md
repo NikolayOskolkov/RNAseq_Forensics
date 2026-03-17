@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="RNAseq_Forencics.png" alt="RNAseq Forensics Logo" height="320"/>
+  <img src="images/RNAseq_Forencics.png" alt="RNAseq Forensics Logo" height="320"/>
 </p>
 
 # RNAseq Forensics
