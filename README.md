@@ -13,7 +13,7 @@ To predict contamination, you need to provide a gene expression matrix `merged_t
 The output of the tool is the quantification of transcriptomic contribution from different tissues to each RNAseq sample:
 
 <p align="center">
-  <img src="images/DecisionTree_validation.png" alt="RNAseq Forensics Prediction" height="420"/>
+  <img src="images/DecisionTree_validation.png" alt="RNAseq Forensics Prediction" height="520"/>
 </p>
 
 The tool was validated on five independent RNAseq gene expression datasets originating from muscle, liver, heart and blood tissues from human, mouse and apes.
