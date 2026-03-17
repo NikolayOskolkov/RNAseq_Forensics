@@ -1,0 +1,244 @@
+---
+title: "Understanding Function of Orthologous Genes"
+author: "Nikolay Oskolkov, SciLifeLab, NBIS Long Term Support, nikolay.oskolkov@scilifelab.se"
+date: "May 18, 2018"
+output:
+  html_document:
+    toc: yes
+  pdf_document:
+    toc: yes
+subtitle: PI Ola Hansson, Lund University
+abstract: |
+  In this report we will use GTEX human gene expression data to build lists of tissue-specific genes and calculate their enrichment in the orthologous (and non-orthologous) gene sets.
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir="/home/nikolay/WABI/O_Hansson/Gtex/")
+```
+
+### Loading and Exploring GTEX Data
+
+We are going to use GTEX v.7 latest data set [1]. Let us have a look which tissues and how many samples are available in this GTEX release:
+
+```{r Check GTEX Tissues}
+library("psichomics")
+gtex_tissues<-getGtexTissues("GTEx_v7_Annotations_SampleAttributesDS.txt")
+gtex_tissues
+length(gtex_tissues)
+tissues <- as.character(gtex_tissues)
+```
+
+Thus we seem to have `r length(gtex_tissues)` tissues while GTEX web-page says there are 53 tissues available. This difference is due to the fact that e.g. "Brain"" tissue has multiple cell types RNA sequenced separately. Let us now load the unnormalized gene expression data together with meta and phenotypic information about the donors: 
+
+```{r Load GTEX Data}
+gtex <- loadGtexData(clinical="GTEx_v7_Annotations_SubjectPhenotypesDS.txt", 
+                     sampleMetadata="GTEx_v7_Annotations_SampleAttributesDS.txt", 
+                     junctionQuant=NULL, 
+                     geneExpr="All_Tissue_Site_Details.combined.reads.gct",tissues)
+names(gtex$GTEx)
+dim(gtex$GTEx$`Sample metadata`)
+gtex$GTEx$`Sample metadata`[1:5,1:5]
+dim(gtex$GTEx$`Clinical data`)
+gtex$GTEx$`Clinical data`[1:3,1:3]
+dim(gtex$GTEx$`Gene expression`)
+gtex$GTEx$`Gene expression`[1:5,1:5]
+```
+
+### Build Tissue-Specific Gene Sets
+
+Now we will load the meadian TPM gene expression values across all samples for each tissue and have a look:
+
+```{r Median GTEX}
+gene_median<-read.delim("GTEx_Analysis_2016-01-15_v7_RNASeQCv1.1.8_gene_median_tpm.gct",
+                        check.names=FALSE,header=TRUE,sep="\t")
+rownames(gene_median)<-paste0(matrix(unlist(strsplit(as.character(gene_median$gene_id),"\\.")),
+                                     byrow=TRUE,ncol=2)[,1],"__",gene_median$Description)
+#rownames(gene_median)<-paste0(matrix(unlist(strsplit(as.character(gene_median$gene_id),"\\.")),
+#                                     byrow=TRUE,ncol=2)[,1])
+gene_median$gene_id<-NULL
+gene_median$Description<-NULL
+gene_median[1:5,1:5]
+```
+
+Before we proceed with building tissue-specific gene sets lets us first exclude genes which do not overlap between two annotations: 1) annotation used by GTEX, 2) annotation used for processing orthologous sequences (hg38).
+
+```{r Fix Missannotation}
+full_annot<-scan("/home/nikolay/WABI/O_Hansson/FULL_ANNOT.txt",what="character")
+genes_to_exclude<-setdiff(rownames(gene_median),intersect(full_annot,rownames(gene_median)))
+gene_median<-gene_median[!rownames(gene_median)%in%genes_to_exclude,]
+gene_median[1:5,1:5]
+```
+
+
+This information can be used for ranking tissues of predominant expression for each gene. For example for IDI2 (which we know is Skeletal Muscle specific gene) we can rank all tissues like this:
+
+```{r IDI2,fig.width=10,fig.height=8}
+IDI2_values<-log10(as.numeric(sort(gene_median["ENSG00000148377__IDI2",],decreasing=TRUE))+1)[1:5]
+IDI2_names<-names(sort(gene_median["ENSG00000148377__IDI2",],decreasing=TRUE))[1:5]
+#IDI2_values<-log10(as.numeric(sort(gene_median["ENSG00000148377",],decreasing=TRUE))+1)[1:5]
+#IDI2_names<-names(sort(gene_median["ENSG00000148377",],decreasing=TRUE))[1:5]
+barplot(IDI2_values,names.arg=IDI2_names,las=1,cex.names=0.7,ylab="LOG10 ( TPM GENE EXPRESSION )",xlab="TISSUES")
+```
+
+Now for each gene we are going to define the primary tissue of expression and demand that for the second ranked tissue the gene is one order of magnitude (10 times) less expressed than for the primary tissue we will call the gene "tissue specific gene" for that primary tissue:
+
+```{r BUILD LISTS OF TISSUE SPECIFIC GENES}
+tissue<-vector()
+tissue_specific_gene<-vector()
+tissue_spec_coeff<-vector()
+a<-seq(from=0,to=length(rownames(gene_median)),by=10000)
+for(i in 1:length(rownames(gene_median)))
+{
+  if(isTRUE(i%in%a)==TRUE){print(paste("FINISHED ",i," FEATURES",sep=""))}
+  gene_expr<-sort(gene_median[i,],decreasing=TRUE)
+  if(as.numeric(rowSums(gene_expr))==0){next}
+  
+  if(as.numeric(gene_expr[1])!=0 & as.numeric(gene_expr[2])==0)
+  {
+    tissue<-append(tissue,names(gene_expr)[1])
+    tissue_specific_gene<-append(tissue_specific_gene,rownames(gene_median[i,]))
+    tissue_spec_coeff<-append(tissue_spec_coeff,Inf)
+  }
+  
+  if(as.numeric(gene_expr[2])!=0 & as.numeric(gene_expr[1])/as.numeric(gene_expr[2])>=10)
+  {
+    tissue<-append(tissue,names(gene_expr)[1])
+    tissue_specific_gene<-append(tissue_specific_gene,rownames(gene_median[i,]))
+    tissue_spec_coeff<-append(tissue_spec_coeff,as.numeric(gene_expr[1])/as.numeric(gene_expr[2]))
+  }
+}
+output_tissue_specific_genes<-data.frame(TISSUE=tissue,GENE=tissue_specific_gene,COEFF=tissue_spec_coeff,
+                                         check.names=FALSE)
+output_tissue_specific_genes<-output_tissue_specific_genes[order(-output_tissue_specific_genes$COEFF),]
+head(output_tissue_specific_genes,20)
+length(unique(as.character(output_tissue_specific_genes$TISSUE)))
+```
+
+Now all the genes are ranked by the coefficient of specificity, i.e. the fold change in gene expression between first ranked (primary) tissue and second ranked tissues. Lots of "Inf" specificity coefficients mostly correspond to non-coding genes (non-coding RNAs etc.) where the genes has a tiny expression in only one tissue, and zero expression anywhere else. We still want to keep them in the analysis but possibly one can also exclude them. Note that now we have `r length(unique(as.character(output_tissue_specific_genes$TISSUE)))` unique tissues with at least one tissue-specific gene.
+
+Now, let us check how the tissue-specific gene set looks like for e.g. Skeletal Muscles and write the tissue-specific gene sets for each tissue into files:
+
+```{r Write Tissue-Specific Genes to Files}
+output_tissue_specific_genes[grepl("Muscle",as.character(output_tissue_specific_genes$TISSUE)),]
+
+unique_tissues<-unique(as.character(output_tissue_specific_genes$TISSUE))
+for(i in unique_tissues)
+{
+  write.table(output_tissue_specific_genes[as.character(output_tissue_specific_genes$TISSUE)==i,],
+              file=paste0("TISSUE_SPECIFIC_GENES/",i,".txt"),
+              col.names=TRUE,row.names=FALSE,quote=FALSE,sep="\t")
+}
+```
+
+Note that initially we had `r dim(gene_median)[1]` genes, and `r dim(output_tissue_specific_genes)[1]` out of them can be classified as tissue-specific. This implies that each of the `r length(unique(as.character(output_tissue_specific_genes$TISSUE)))` tissues has in average `r round(dim(output_tissue_specific_genes)[1]/length(unique(as.character(output_tissue_specific_genes$TISSUE))))` tissue-specific genes.
+
+
+### Compare with Orthologous Genes
+
+Now let us load the list of genes with orthologous information and have a look:
+
+```{r Orthologous genes,fig.width=10,fig.height=8}
+orthologs<-read.delim("/home/nikolay/WABI/O_Hansson/ORTHOLOGOUS_GENES_NICE.txt",header=TRUE,sep="\t")
+orthologs<-orthologs[!as.character(orthologs)%in%genes_to_exclude,]
+head(orthologs,20)
+#orthologs$GENE<-matrix(unlist(strsplit(as.character(orthologs$GENE),"__")),byrow=TRUE,ncol=2)[,1]
+dim(orthologs)
+hist(orthologs$FRACTION_ORTHO,breaks=100,xlab="FRACTION OF ORTHOLOGOUS NUCLEOTIDES",ylab="FREQUENCY",col="darkred",main="HISTOGRAM OF ORTHOLOGOUS GENES")
+```
+
+```{r Venn Diagram,fig.width=10,fig.height=8}
+library("VennDiagram")
+grid.newpage()
+draw.pairwise.venn(dim(orthologs)[1], dim(output_tissue_specific_genes)[1], length(intersect(as.character(orthologs$GENE),as.character(output_tissue_specific_genes$GENE))), category = c("ORTHOLOGOUS GENES", "TISSUE-SPECIFIC GENES"), lty = rep("blank", 2), fill = c("light blue", "pink"), alpha = rep(0.5, 2), cat.pos = c(0, 0), cat.dist = rep(0.025, 2))
+```
+
+We can see that the intersect between the orthologous and tissue-specific gene lists is not great. Looks like one has taken a gene pool and split it into two barely overlapping parts. This implies that tissue-specific genes for some strange reason do not have annotated orthologous sequences.
+
+
+### Enrichment Analysis of Orthologous and Tissue-Specific Genes
+
+Now let us build orthologous (similarity >= 60%) and non-orthologous (similarity <= 10%) gene lists and run enrichment analysis with resampling procedure:
+
+```{r Enrichment Analysis}
+#BUILD OTHOLOGOUS AND NON_ORTHOLOGOUS GENES LISTS
+non_orthologous_genes<-orthologs[orthologs$FRACTION_ORTHO<=0.1,]
+orthologous_genes<-orthologs[orthologs$FRACTION_ORTHO>=0.6,]
+
+#FIND OVERLAP BETWEEN ORTHOLOGOUS AND TISSUE SPECIFIC GENES
+gene_pool<-union(as.character(orthologs$GENE),as.character(output_tissue_specific_genes$GENE))
+my_tissues<-list.files("TISSUE_SPECIFIC_GENES/")
+observed_overlap_non_orthologous_vector<-vector()
+observed_overlap_orthologous_vector<-vector()
+mean_resample_overlap_non_orthologous_vector<-vector()
+mean_resample_overlap_orthologous_vector<-vector()
+p_value_enrichment_non_orthologous<-vector()
+p_value_enrichment_orthologous<-vector()
+for(j in 1:length(my_tissues))
+{
+my_tissue<-read.delim(paste0("TISSUE_SPECIFIC_GENES/",my_tissues[j]),header=TRUE,sep="\t")
+#muscle<-output_tissue_specific_genes[grepl("Muscle",as.character(output_tissue_specific_genes$TISSUE)),]
+print(paste0("WORKING WITH FILE ",my_tissues[j]))
+observed_overlap_non_orthologous<-length(intersect(as.character(my_tissue$GENE),
+                                                   as.character(non_orthologous_genes$GENE)))
+print(paste0("OBSERVED OVERLAP NON-ORTHOLOGOUS: ",observed_overlap_non_orthologous))
+observed_overlap_non_orthologous_vector<-append(observed_overlap_non_orthologous_vector,
+                                                observed_overlap_non_orthologous)
+
+observed_overlap_orthologous<-length(intersect(as.character(my_tissue$GENE),
+                                                   as.character(orthologous_genes$GENE)))
+print(paste0("OBSERVED OVERLAP ORTHOLOGOUS: ",observed_overlap_orthologous))
+observed_overlap_orthologous_vector<-append(observed_overlap_orthologous_vector,
+                                                observed_overlap_orthologous)
+
+resample_overlap_non_orthologous<-vector()
+resample_overlap_orthologous<-vector()
+N<-10000
+for(i in 1:N)
+{
+  my_tissue_resample<-gene_pool[sample(1:length(gene_pool),dim(my_tissue)[1],replace=TRUE)]
+  non_orthologous_resample<-gene_pool[sample(1:length(gene_pool),dim(non_orthologous_genes)[1],replace=TRUE)]
+  orthologous_resample<-gene_pool[sample(1:length(gene_pool),dim(orthologous_genes)[1],replace=TRUE)]
+  resample_overlap_non_orthologous<-append(resample_overlap_non_orthologous,
+                                           length(intersect(my_tissue_resample,non_orthologous_resample)))
+  resample_overlap_orthologous<-append(resample_overlap_orthologous,
+                                           length(intersect(my_tissue_resample,orthologous_resample)))
+}
+hist(resample_overlap_non_orthologous,breaks=100,main=my_tissues[j])
+print(paste0("MEAN OF RESAMPLED OVERLAP NON-ORTHOLOGOUS: ",mean(resample_overlap_non_orthologous)))
+mean_resample_overlap_non_orthologous_vector<-append(mean_resample_overlap_non_orthologous_vector,
+                                                     mean(resample_overlap_non_orthologous))
+hist(resample_overlap_orthologous,breaks=100,main=my_tissues[j])
+print(paste0("MEAN OF RESAMPLED OVERLAP ORTHOLOGOUS: ",mean(resample_overlap_orthologous)))
+mean_resample_overlap_orthologous_vector<-append(mean_resample_overlap_orthologous_vector,
+                                                     mean(resample_overlap_orthologous))
+print(paste0("P-VALUE OF ENRICHMENT NON-ORTHOLOGOUS: ",
+             sum(resample_overlap_non_orthologous>=observed_overlap_non_orthologous)/N))
+p_value_enrichment_non_orthologous<-append(p_value_enrichment_non_orthologous,
+                                           sum(resample_overlap_non_orthologous>=observed_overlap_non_orthologous)/N)
+print(paste0("P-VALUE OF ENRICHMENT ORTHOLOGOUS: ",
+             sum(resample_overlap_orthologous>=observed_overlap_orthologous)/N))
+p_value_enrichment_orthologous<-append(p_value_enrichment_orthologous,
+                                       sum(resample_overlap_orthologous>=observed_overlap_orthologous)/N)
+print("#################################################################################")
+}
+output_enrichment<-data.frame(TISSUE=matrix(unlist(strsplit(my_tissues,"\\.")),byrow=TRUE,ncol=2)[,1],
+                              OBSERVED_NON_ORTHOLOGOUS=observed_overlap_non_orthologous_vector,
+                              OBSERVED_ORTHOLOGOUS=observed_overlap_orthologous_vector,
+                              MEAN_RESAMPLE_NON_ORTHOLOGOUS=mean_resample_overlap_non_orthologous_vector,
+                              MEAN_RESAMPLE_ORTHOLOGOUS=mean_resample_overlap_orthologous_vector,
+                              P_VALUE_ENRICHMENT_NON_ORTHOLOGOUS=p_value_enrichment_non_orthologous,
+                              P_VALUE_ENRICHMENT_ORTHOLOGOUS=p_value_enrichment_orthologous)
+output_enrichment_non_orthologous<-output_enrichment[order(output_enrichment$P_VALUE_ENRICHMENT_NON_ORTHOLOGOUS),]
+output_enrichment_non_orthologous
+output_enrichment_orthologous<-output_enrichment[order(output_enrichment$P_VALUE_ENRICHMENT_ORTHOLOGOUS),]
+output_enrichment_orthologous
+```
+
+The only tissue-specific gene set which seems to be enriched in the non-orthologous genes is Brain - Nucleus accumbens (basal ganglia). This is an interesting result indicating that the genes with low similarity between chimps and humans have something to do with Brain. 
+
+
+### References
+
+[1] The Genotype-Tissue Expression (GTEx) project, The GTEx Consortium.
+Nature Genetics. 29 May 2013. 45(6):580-5. doi: 10.1038/ng.2653, PMID: 23715323

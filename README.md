@@ -24,3 +24,6 @@ The tools was trained with decision tree on the GTEX https://gtexportal.org gene
 <p align="center">
   <img src="images/tSNE_GTEX.png" alt="RNAseq Forensics Prediction" height="520"/>
 </p>
+
+## Training a baseline model
+RNAseq Forensics can be trained simply by memorizing tissues-specific genes. The procedure of extracting tissue-specific genes using GTEX data is explained in the `tissue_specific_genes/OrthologsFunction.Rmd` notebook.
