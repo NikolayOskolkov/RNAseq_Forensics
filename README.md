@@ -25,6 +25,13 @@ The tools was trained with decision tree on the GTEX https://gtexportal.org gene
   <img src="images/tSNE_GTEX.png" alt="RNAseq Forensics Prediction" height="520"/>
 </p>
 
+The decision tree learns key genes separating the GTEX samples from different tissues in the form of the following hierarchical organization:
+
+<p align="center">
+  <img src="images/DecisionTree_GTEX.png" alt="Decision Tree GTEX" height="520"/>
+</p>
+
+
 ## Training a baseline model
 RNAseq Forensics can be trained simply by memorizing tissues-specific genes. The procedure of extracting tissue-specific genes using GTEX data is explained in the `tissue_specific_genes/OrthologsFunction.Rmd` notebook. To predict contamination with the baseline model, you need to provide a gene expression matrix `merged_tissues_organisms_baseline.txt` and run the following command line:
 
@@ -35,3 +42,5 @@ The output of the tool is the quantification of transcriptomic contribution from
 <p align="center">
   <img src="images/BaselineModel_validation.png" alt="RNAseq Forensics Prediction Baseline" height="520"/>
 </p>
+
+The validation accuracy of this baseline model is also very high. A proper banchmarking of those two models on a number of RNAseq gene expression datasets across tissues and mammalian organisms is to be done.
