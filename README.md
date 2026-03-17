@@ -19,7 +19,7 @@ The output of the tool is the quantification of transcriptomic contribution from
 The tool was validated on five independent RNAseq gene expression datasets originating from muscle, liver, heart and blood tissues from human, mouse and apes. RNAseq Forensics achieved the average 92% of accuracy on the validation datasets.
 
 ## Training RNAseq Forensics
-The tools was trained with decision tree on the GTEX https://gtexportal.org gene expresion data from several human tissues. The GTEX v.7 gene expression matrix and sample annotation can be downloaded from: https://drive.google.com/drive/folders/1AuHLbv_VqVgLmz9GptN80adjjbUaNj4I?usp=drive_link. Exploratory analysis with tSNE revealed very distinct clustering of the samples from different tissues in terms of gene expression implying that a machine learning model should be straightforward to train for cross-tissue contamination assessment.
+The tools was trained with decision tree on the GTEX https://gtexportal.org gene expresion data from several human tissues. The GTEX v.7 gene expression matrix and sample annotation can be downloaded from: https://drive.google.com/drive/folders/1AuHLbv_VqVgLmz9GptN80adjjbUaNj4I?usp=drive_link. Exploratory analysis with tSNE revealed very distinct clustering of the samples from different tissues in terms of gene expression, which implies that a machine learning model should be straightforward to train for cross-tissue contamination assessment.
 
 <p align="center">
   <img src="images/tSNE_GTEX.png" alt="RNAseq Forensics Prediction" height="520"/>
