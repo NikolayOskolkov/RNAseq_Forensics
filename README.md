@@ -33,7 +33,7 @@ The decision tree learns key genes separating the GTEX samples from different ti
 
 
 ## Training a baseline model
-RNAseq Forensics can be trained simply by memorizing tissues-specific genes. The procedure of extracting the tissue-specific genes using GTEX data is explained in the `tissue_specific_genes/OrthologsFunction.Rmd` notebook. The prediction of cross-tissues contamination for each sample is performed via the computation of a simple overlap between the tissue-specific gene sets and the most expressed genes in each sample. To predict contamination, you input a gene expression matrix `merged_tissues_organisms_baseline.txt` and run the following command line:
+RNAseq Forensics can be trained simply by memorizing tissues-specific genes. The procedure of extracting the tissue-specific genes using GTEX data is explained in the `tissue_specific_genes/OrthologsFunction.Rmd` notebook. The prediction of cross-tissues contamination for each sample is performed via the computation of a simple overlap between the tissue-specific gene sets and the most expressed genes in each sample. To predict contamination, you need to input a gene expression matrix `merged_tissues_organisms_baseline.txt` and run the following command line:
 
     Rscript RNAseq_Forensics.R merged_tissues_organisms_baseline.txt
 
